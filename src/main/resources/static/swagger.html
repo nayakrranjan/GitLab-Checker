@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAPI Documentation - GitLab Public Repository Risk Scanner</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --border: #334155;
+            --accent: #6366f1;
+            --method-get: #3b82f6;
+            --method-post: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 32px 16px; }
+        .container { max-width: 960px; margin: 0 auto; }
+        header { margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { font-size: 24px; }
+        .back-link { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600; }
+        .endpoint { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+        .endpoint-header { padding: 14px 18px; display: flex; align-items: center; gap: 14px; font-family: monospace; font-size: 14px; cursor: pointer; }
+        .method { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; color: white; }
+        .method-get { background: var(--method-get); }
+        .method-post { background: var(--method-post); }
+        .path { font-weight: 600; }
+        .summary { color: var(--muted); margin-left: auto; font-family: -apple-system, sans-serif; font-size: 13px; }
+        .endpoint-body { padding: 18px; border-top: 1px solid var(--border); background: #0b1120; font-size: 13px; }
+        .section-title { font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-size: 12px; }
+        code { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #38bdf8; }
+        pre { background: #1e293b; padding: 12px; border-radius: 6px; overflow-x: auto; color: #e2e8f0; font-family: monospace; margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>OpenAPI 3.0 API Documentation</h1>
+                <p style="color: var(--muted); margin-top: 4px; font-size: 14px;">GitLab Public Repository Risk Scanner Endpoints</p>
+            </div>
+            <div>
+                <a href="/" class="back-link">&larr; Back to Web Dashboard</a>
+                &nbsp;|&nbsp;
+                <a href="/openapi.yaml" download class="back-link" style="color: #38bdf8;">Download OpenAPI Spec</a>
+            </div>
+        </header>
+
+        <!-- POST /api/v1/scan -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method method-post">POST</span>
+                <span class="path">/api/v1/scan</span>
+                <span class="summary">Execute risk scan with JSON payload</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-title">Request Body (application/json)</div>
+                <pre>{
+  "target": "gitlab-org",
+  "type": "AUTO",              // Optional: AUTO, USER, GROUP, PROJECT
+  "token": "glpat-...",        // Optional: Private token for authenticated scan
+  "baseUrl": "https://gitlab.com", // Optional: Custom instance
+  "publicOnly": true          // Optional: Defaults to true
+}</pre>
+                <div class="section-title" style="margin-top: 14px;">Response (200 OK)</div>
+                <p>Returns complete <code>ScanResponse</code> with metrics, scanned projects, and detected risks.</p>
+            </div>
+        </div>
+
+        <!-- GET /api/v1/scan -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method method-get">GET</span>
+                <span class="path">/api/v1/scan</span>
+                <span class="summary">Execute risk scan with query parameters</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-title">Query Parameters</div>
+                <table>
+                    <tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+                    <tr><td><code>target</code></td><td>string</td><td>Yes</td><td>GitLab username, group name, or project path</td></tr>
+                    <tr><td><code>type</code></td><td>string</td><td>No</td><td><code>AUTO</code>, <code>USER</code>, <code>GROUP</code>, or <code>PROJECT</code></td></tr>
+                    <tr><td><code>token</code></td><td>string</td><td>No</td><td>GitLab Personal Access Token for private repos</td></tr>
+                    <tr><td><code>baseUrl</code></td><td>string</td><td>No</td><td>Custom GitLab base instance URL</td></tr>
+                    <tr><td><code>publicOnly</code></td><td>boolean</td><td>No</td><td>Filter public repositories (default true)</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- GET /api/v1/scan/table -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method method-get">GET</span>
+                <span class="path">/api/v1/scan/table</span>
+                <span class="summary">Retrieve scan results formatted as ASCII CLI table</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns <code>text/plain</code> containing the structured CLI table (Project Name | Issue | Severity) matching problem specifications.</p>
+            </div>
+        </div>
+
+        <!-- GET /api/v1/scan/export/json -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method method-get">GET</span>
+                <span class="path">/api/v1/scan/export/json</span>
+                <span class="summary">Download complete scan report as JSON file</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns downloadable <code>scan-report-[target].json</code> attachment.</p>
+            </div>
+        </div>
+
+        <!-- GET /api/v1/scan/export/pdf -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method method-get">GET</span>
+                <span class="path">/api/v1/scan/export/pdf</span>
+                <span class="summary">Download formatted audit report as PDF document</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns downloadable <code>scan-report-[target].pdf</code> attachment.</p>
+            </div>
+        </div>
+
+        <!-- GET /health -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method method-get">GET</span>
+                <span class="path">/health</span>
+                <span class="summary">Service Health Check</span>
+            </div>
+            <div class="endpoint-body">
+                <p>Returns status string: <code>"GitLab Risk Scanner is running"</code>.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

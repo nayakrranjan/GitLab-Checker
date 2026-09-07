@@ -1,0 +1,236 @@
+openapi: 3.0.3
+info:
+  title: GitLab Public Repository Risk Scanner API
+  description: Automated scanner that analyzes public and private GitLab repositories for security risks, exposed credentials, sensitive files, and missing metadata.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local Server
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: System health status
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "GitLab Risk Scanner is running"
+  /api/v1/scan:
+    post:
+      summary: Trigger repository risk scan via JSON body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+      responses:
+        '200':
+          description: Scan results and risk findings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+    get:
+      summary: Trigger repository risk scan via query parameters
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "gitlab-org"
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [AUTO, USER, GROUP, PROJECT]
+            default: AUTO
+        - name: token
+          in: query
+          schema:
+            type: string
+        - name: baseUrl
+          in: query
+          schema:
+            type: string
+            example: "https://gitlab.example.com"
+        - name: publicOnly
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Scan results and risk findings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+  /api/v1/scan/table:
+    get:
+      summary: Get scan results in formatted CLI table format
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [AUTO, USER, GROUP, PROJECT]
+      responses:
+        '200':
+          description: CLI ASCII Table
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/v1/scan/export/json:
+    get:
+      summary: Download scan report in JSON format
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Downloadable JSON report
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/v1/scan/export/pdf:
+    get:
+      summary: Download scan report as PDF
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Downloadable PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /api/v1/gitlab/users/{username}/projects:
+    get:
+      summary: Retrieve projects for a GitLab user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of projects
+  /api/v1/gitlab/groups/{group}/projects:
+    get:
+      summary: Retrieve projects for a GitLab group
+      parameters:
+        - name: group
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of projects
+components:
+  schemas:
+    ScanRequest:
+      type: object
+      required:
+        - target
+      properties:
+        target:
+          type: string
+          description: GitLab username, group name, or project path
+          example: "gitlab-org"
+        type:
+          type: string
+          enum: [AUTO, USER, GROUP, PROJECT]
+          default: AUTO
+        token:
+          type: string
+          description: GitLab personal access token for private repos
+        baseUrl:
+          type: string
+          description: Custom GitLab instance URL
+        publicOnly:
+          type: boolean
+          default: true
+    Risk:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [SENSITIVE_FILE, EXPOSED_SECRET, MISSING_METADATA]
+        issue:
+          type: string
+          example: "Sensitive Files"
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [HIGH, MEDIUM, LOW]
+        file:
+          type: string
+        line:
+          type: integer
+        snippet:
+          type: string
+        remediation:
+          type: string
+    ProjectScanResult:
+      type: object
+      properties:
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        projectPath:
+          type: string
+        webUrl:
+          type: string
+        visibility:
+          type: string
+        risks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Risk'
+    ScanResponse:
+      type: object
+      properties:
+        target:
+          type: string
+        targetType:
+          type: string
+        scannedAt:
+          type: string
+        totalProjectsScanned:
+          type: integer
+        totalRisksFound:
+          type: integer
+        highSeverityCount:
+          type: integer
+        mediumSeverityCount:
+          type: integer
+        lowSeverityCount:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectScanResult'

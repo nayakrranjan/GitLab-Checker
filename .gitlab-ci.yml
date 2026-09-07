@@ -1,0 +1,64 @@
+# GitLab CI/CD Pipeline for GitLab Public Repository Risk Scanner
+image: eclipse-temurin:21-jdk-alpine
+
+stages:
+  - test
+  - build
+  - docker
+  - scan
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository
+    - target/
+
+# 1. Run unit test suite
+test:
+  stage: test
+  script:
+    - chmod +x ./mvnw
+    - ./mvnw test
+  artifacts:
+    when: always
+    reports:
+      junit: target/surefire-reports/*.xml
+
+# 2. Package production jar
+build:
+  stage: build
+  script:
+    - chmod +x ./mvnw
+    - ./mvnw package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+
+# 3. Docker build (if Docker daemon is available)
+docker-build:
+  stage: docker
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - docker build -t gitlab-risk-scanner:$CI_COMMIT_SHA -t gitlab-risk-scanner:latest .
+
+# 4. Automated Risk Scan Job (Automates scanning of target repositories)
+automated-risk-scan:
+  stage: scan
+  needs: [build]
+  rules:
+    - if: '$SCAN_TARGET'
+  script:
+    - java -jar target/*.jar --scan.target="$SCAN_TARGET" --scan.type="${SCAN_TYPE:-AUTO}" --export.json=scan-report.json --export.pdf=scan-report.pdf
+  artifacts:
+    name: "scan-report-$CI_PIPELINE_ID"
+    paths:
+      - scan-report.json
+      - scan-report.pdf
+    expire_in: 30 days

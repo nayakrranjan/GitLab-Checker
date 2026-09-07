@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  gitlab-risk-scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gitlab-risk-scanner:latest
+    container_name: gitlab-risk-scanner
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+      - GITLAB_BASE_URL=${GITLAB_BASE_URL:-https://gitlab.com}
+      - GITLAB_TOKEN=${GITLAB_TOKEN:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: RasmiranjanNayak_Metron Security
+
+server:
+  port: 8080
+
+gitlab:
+  base-url: ${GITLAB_BASE_URL:https://gitlab.com}
+  api-path: ${GITLAB_API_PATH:/api/v4}
+  token: ${GITLAB_TOKEN:}
+  max-file-scan-size: ${GITLAB_MAX_FILE_SCAN_SIZE:524288}
+  max-tree-items: ${GITLAB_MAX_TREE_ITEMS:500}

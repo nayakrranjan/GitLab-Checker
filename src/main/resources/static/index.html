@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitLab Public Repository Risk Scanner</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --high-color: #ef4444;
+            --high-bg: rgba(239, 68, 68, 0.15);
+            --medium-color: #f59e0b;
+            --medium-bg: rgba(245, 158, 11, 0.15);
+            --low-color: #3b82f6;
+            --low-bg: rgba(59, 130, 246, 0.15);
+            --clean-color: #10b981;
+            --clean-bg: rgba(16, 185, 129, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand h1 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 12px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 6px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-color);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"], input[type="password"], select {
+            background: #0b1120;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            padding: 10px 20px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 42px;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background: #334155;
+            color: var(--text-primary);
+        }
+
+        .secondary-btn:hover {
+            background: #475569;
+        }
+
+        .advanced-toggle {
+            font-size: 12px;
+            color: var(--accent-color);
+            cursor: pointer;
+            margin-top: 12px;
+            display: inline-block;
+        }
+
+        .advanced-section {
+            display: none;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .metric-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .val-total { color: #e2e8f0; }
+        .val-high { color: var(--high-color); }
+        .val-med { color: var(--medium-color); }
+        .val-low { color: var(--low-color); }
+        .val-risks { color: #f43f5e; }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .export-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #0b1120;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 12px 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(51, 65, 85, 0.2);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-high { background: var(--high-bg); color: var(--high-color); border: 1px solid var(--high-color); }
+        .badge-medium { background: var(--medium-bg); color: var(--medium-color); border: 1px solid var(--medium-color); }
+        .badge-low { background: var(--low-bg); color: var(--low-color); border: 1px solid var(--low-color); }
+        .badge-none { background: var(--clean-bg); color: var(--clean-color); border: 1px solid var(--clean-color); }
+
+        .code-snippet {
+            font-family: monospace;
+            background: #0b1120;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            color: #38bdf8;
+            word-break: break-all;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .remediation-tip {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .loading-banner {
+            display: none;
+            padding: 40px;
+            text-align: center;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-banner {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--high-color);
+            color: #fca5a5;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #10b981;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">
+                <h1>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <circle cx="12" cy="11" r="3"/>
+                    </svg>
+                    GitLab Public Repository Risk Scanner
+                </h1>
+                <p>Automated static risk analysis: Sensitive files, regex secret leakage, and missing metadata</p>
+            </div>
+            <div class="nav-links">
+                <a href="/swagger.html">OpenAPI Docs</a>
+                <a href="/health" target="_blank">System Health</a>
+            </div>
+        </header>
+
+        <div id="errorBanner" class="error-banner"></div>
+
+        <div class="card">
+            <form id="scanForm" onsubmit="handleScan(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="targetInput">GitLab User or Group Name</label>
+                        <input type="text" id="targetInput" placeholder="e.g. gitlab-org, security-group, or octocat" required value="gitlab-org">
+                    </div>
+                    <div class="form-group">
+                        <label for="typeSelect">Target Type</label>
+                        <select id="typeSelect">
+                            <option value="AUTO" selected>Auto-Detect</option>
+                            <option value="USER">User Account</option>
+                            <option value="GROUP">Group / Organization</option>
+                            <option value="PROJECT">Single Project (path or ID)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button type="submit" id="submitBtn">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            Start Risk Scan
+                        </button>
+                    </div>
+                </div>
+
+                <span class="advanced-toggle" onclick="toggleAdvanced()">
+                    &#9660; Advanced Configuration (Private Repositories & Custom Instance)
+                </span>
+
+                <div id="advancedSection" class="advanced-section">
+                    <div class="form-group">
+                        <label for="baseUrlInput">GitLab Base URL</label>
+                        <input type="text" id="baseUrlInput" placeholder="https://gitlab.example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="tokenInput">GitLab Token (Optional for Private Repos)</label>
+                        <input type="password" id="tokenInput" placeholder="glpat-...">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end; padding-bottom: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="publicOnlyCheck" checked>
+                            Scan Public Repositories Only
+                        </label>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="loadingBanner" class="loading-banner">
+            <div class="spinner"></div>
+            <h3>Scanning GitLab Repositories...</h3>
+            <p style="color: var(--text-secondary); margin-top: 6px; font-size: 13px;">Inspecting repository trees for sensitive files, missing README/LICENSE, and regex credentials.</p>
+        </div>
+
+        <div id="resultsContainer" style="display: none;">
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-title">Repositories</div>
+                    <div class="metric-value val-total" id="mProjects">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-title">Total Risks</div>
+                    <div class="metric-value val-risks" id="mRisks">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-title">High Severity</div>
+                    <div class="metric-value val-high" id="mHigh">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-title">Medium Severity</div>
+                    <div class="metric-value val-med" id="mMed">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-title">Low Severity</div>
+                    <div class="metric-value val-low" id="mLow">0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="toolbar">
+                    <div class="filters">
+                        <input type="text" id="searchFilter" placeholder="Search project or file..." oninput="applyFilters()" style="width: 240px;">
+                        <select id="severityFilter" onchange="applyFilters()">
+                            <option value="ALL">All Severities</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                        <select id="categoryFilter" onchange="applyFilters()">
+                            <option value="ALL">All Categories</option>
+                            <option value="SENSITIVE_FILE">Sensitive Files</option>
+                            <option value="EXPOSED_SECRET">Exposed Secrets</option>
+                            <option value="MISSING_METADATA">Missing Metadata</option>
+                        </select>
+                    </div>
+
+                    <div class="export-actions">
+                        <button class="secondary-btn" onclick="exportJson()">Export JSON</button>
+                        <button class="secondary-btn" onclick="exportPdf()">Download PDF</button>
+                        <button class="secondary-btn" onclick="copyCliTable()">Copy CLI Table</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Issue</th>
+                                <th>Severity</th>
+                                <th>Category</th>
+                                <th>File / Location</th>
+                                <th>Remediation Guidance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="findingsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let currentScanData = null;
+
+        function toggleAdvanced() {
+            const el = document.getElementById('advancedSection');
+            el.style.display = (el.style.display === 'grid') ? 'none' : 'grid';
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 3000);
+        }
+
+        async function handleScan(e) {
+            e.preventDefault();
+            const target = document.getElementById('targetInput').value.trim();
+            const type = document.getElementById('typeSelect').value;
+            const baseUrl = document.getElementById('baseUrlInput').value.trim();
+            const token = document.getElementById('tokenInput').value.trim();
+            const publicOnly = document.getElementById('publicOnlyCheck').checked;
+
+            if (!target) return;
+
+            const errBanner = document.getElementById('errorBanner');
+            const loading = document.getElementById('loadingBanner');
+            const results = document.getElementById('resultsContainer');
+            const submitBtn = document.getElementById('submitBtn');
+
+            errBanner.style.display = 'none';
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            submitBtn.disabled = true;
+
+            const payload = {
+                target: target,
+                type: type,
+                baseUrl: baseUrl || null,
+                token: token || null,
+                publicOnly: publicOnly
+            };
+
+            try {
+                const resp = await fetch('/api/v1/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({ message: 'HTTP ' + resp.status + ' error' }));
+                    throw new Error(errData.message || 'Scan failed');
+                }
+
+                currentScanData = await resp.json();
+                renderScanResults(currentScanData);
+            } catch (err) {
+                errBanner.innerText = 'Error: ' + err.message;
+                errBanner.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        function renderScanResults(data) {
+            document.getElementById('mProjects').innerText = data.totalProjectsScanned;
+            document.getElementById('mRisks').innerText = data.totalRisksFound;
+            document.getElementById('mHigh').innerText = data.highSeverityCount;
+            document.getElementById('mMed').innerText = data.mediumSeverityCount;
+            document.getElementById('mLow').innerText = data.lowSeverityCount;
+
+            applyFilters();
+            document.getElementById('resultsContainer').style.display = 'block';
+        }
+
+        function applyFilters() {
+            if (!currentScanData) return;
+
+            const query = document.getElementById('searchFilter').value.toLowerCase();
+            const sevFilter = document.getElementById('severityFilter').value;
+            const catFilter = document.getElementById('categoryFilter').value;
+
+            const tbody = document.getElementById('findingsTableBody');
+            tbody.innerHTML = '';
+
+            let matchedRows = 0;
+
+            for (const proj of (currentScanData.results || [])) {
+                if (proj.risks.length === 0) {
+                    if (sevFilter === 'ALL' && catFilter === 'ALL' && (!query || proj.projectName.toLowerCase().includes(query))) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${escapeHtml(proj.projectName)}</strong></td>
+                            <td style="color: var(--clean-color);">No issues detected</td>
+                            <td><span class="badge badge-none">CLEAN</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td class="remediation-tip">Repository conforms to security metadata standards.</td>
+                        `;
+                        tbody.appendChild(tr);
+                        matchedRows++;
+                    }
+                    continue;
+                }
+
+                for (const risk of proj.risks) {
+                    if (sevFilter !== 'ALL' && risk.severity !== sevFilter) continue;
+                    if (catFilter !== 'ALL' && risk.category !== catFilter) continue;
+
+                    const matchQuery = !query ||
+                        proj.projectName.toLowerCase().includes(query) ||
+                        (risk.file && risk.file.toLowerCase().includes(query)) ||
+                        risk.description.toLowerCase().includes(query);
+
+                    if (!matchQuery) continue;
+
+                    matchedRows++;
+                    const badgeClass = risk.severity === 'HIGH' ? 'badge-high' :
+                                       (risk.severity === 'MEDIUM' ? 'badge-medium' : 'badge-low');
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${escapeHtml(proj.projectName)}</strong></td>
+                        <td>
+                            <div>${escapeHtml(risk.issue || risk.category)}</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(risk.description)}</div>
+                            ${risk.snippet ? `<div class="code-snippet">${escapeHtml(risk.snippet)}</div>` : ''}
+                        </td>
+                        <td><span class="badge ${badgeClass}">${risk.severity}</span></td>
+                        <td>${formatCategory(risk.category)}</td>
+                        <td>${risk.file ? `<code>${escapeHtml(risk.file)}${risk.line ? ':' + risk.line : ''}</code>` : '-'}</td>
+                        <td class="remediation-tip">${escapeHtml(risk.remediation || '-')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+
+            if (matchedRows === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 30px;">No findings match the selected filters.</td>`;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function formatCategory(cat) {
+            switch (cat) {
+                case 'SENSITIVE_FILE': return 'Sensitive Files';
+                case 'EXPOSED_SECRET': return 'Exposed Secrets';
+                case 'MISSING_METADATA': return 'Missing Metadata';
+                default: return cat;
+            }
+        }
+
+        function exportJson() {
+            if (!currentScanData) return;
+            const blob = new Blob([JSON.stringify(currentScanData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `scan-report-${currentScanData.target}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('JSON report downloaded');
+        }
+
+        function exportPdf() {
+            if (!currentScanData) return;
+            const target = currentScanData.target;
+            const url = `/api/v1/scan/export/pdf?target=${encodeURIComponent(target)}&type=${currentScanData.targetType}`;
+            window.location.href = url;
+        }
+
+        async function copyCliTable() {
+            if (!currentScanData) return;
+            try {
+                const resp = await fetch(`/api/v1/scan/table?target=${encodeURIComponent(currentScanData.target)}&type=${currentScanData.targetType}`);
+                const text = await resp.text();
+                await navigator.clipboard.writeText(text);
+                showToast('CLI Table copied to clipboard!');
+            } catch (e) {
+                alert('Could not copy to clipboard: ' + e.message);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
