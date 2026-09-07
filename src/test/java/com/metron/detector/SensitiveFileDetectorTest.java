@@ -33,13 +33,14 @@ class SensitiveFileDetectorTest {
                 new GitLabTreeItem("4", "secrets.yml", "blob", "secrets.yml", "100644"),
                 new GitLabTreeItem("5", "server.key", "blob", "certs/server.key", "100644"),
                 new GitLabTreeItem("6", "cert.pem", "blob", "certs/cert.pem", "100644"),
-                new GitLabTreeItem("7", "Application.java", "blob", "src/Application.java", "100644")
+                new GitLabTreeItem("7", ".pem", "blob", ".pem", "100644"),
+                new GitLabTreeItem("8", "Application.java", "blob", "src/Application.java", "100644")
         );
 
         RepositoryScanContext context = new RepositoryScanContext(testProject, tree, path -> Optional.empty());
         List<Risk> risks = detector.detect(context);
 
-        assertEquals(6, risks.size());
+        assertEquals(7, risks.size());
         for (Risk risk : risks) {
             assertEquals(RiskCategory.SENSITIVE_FILE, risk.category());
             assertEquals("Sensitive Files", risk.issue());
@@ -49,6 +50,7 @@ class SensitiveFileDetectorTest {
 
         List<String> files = risks.stream().map(Risk::file).toList();
         assertTrue(files.contains(".env"));
+        assertTrue(files.contains(".pem"));
         assertTrue(files.contains("id_rsa"));
         assertTrue(files.contains("src/config.json"));
         assertTrue(files.contains("secrets.yml"));

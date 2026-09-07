@@ -98,7 +98,7 @@ class ExposedSecretDetectorTest {
     void testDetectInRepositoryContext_SkipsBinaryFiles() {
         Map<String, String> fileContents = new HashMap<>();
         fileContents.put("image.png", "binary_content_AKIAIOSFODNN7EXAMPLE");
-        fileContents.put("src/main.py", "API_KEY = ");
+        fileContents.put("src/main.py", "API_KEY = \"sk_live_123456789012345678901234\"");
 
         List<GitLabTreeItem> tree = List.of(
                 new GitLabTreeItem("1", "image.png", "blob", "image.png", "100644"),

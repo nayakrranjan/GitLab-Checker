@@ -19,6 +19,7 @@ public class SensitiveFileDetector implements RiskDetector {
     // Exact filenames that are sensitive (checked in lowercase)
     private static final Set<String> EXACT_SENSITIVE_FILES = Set.of(
             ".env",
+            ".pem",
             ".env.local",
             ".env.production",
             ".env.development",
