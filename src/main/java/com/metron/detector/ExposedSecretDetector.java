@@ -4,6 +4,8 @@ import com.metron.client.dto.GitLabTreeItem;
 import com.metron.model.Risk;
 import com.metron.model.RiskCategory;
 import com.metron.model.Severity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -12,6 +14,8 @@ import java.util.regex.Pattern;
 
 @Component
 public class ExposedSecretDetector implements RiskDetector {
+
+    Logger log = LoggerFactory.getLogger(ExposedSecretDetector.class);
 
     public record SecretPattern(
             String name,
@@ -92,13 +96,20 @@ public class ExposedSecretDetector implements RiskDetector {
             new SecretPattern(
                     "Generic API Key",
                     "(?i)(?:api[_-]?key|secret[_-]?key|auth[_-]?token)\\s*[:=]\\s*['\"]([0-9a-zA-Z_\\-]{16,64})['\"]",
-                    Severity.MEDIUM,
+                    Severity.HIGH,
                     1,
                     false
             ),
             new SecretPattern(
                     "Hardcoded Password",
-                    "(?i)(?:password|passwd|pwd)\\s*[:=]\\s*['\"]([^'\"\\s]{8,64})['\"]",
+                    "(?i)(?:password|passwd|pwd)\\s*[:=]\\s*['\"]?([a-zA-Z0-9_.\\-]{2,64})['\"]?",
+                    Severity.HIGH,
+                    1,
+                    false
+            ),
+            new SecretPattern(
+                    "Hardcoded Username",
+                    "(?i)(?:username|uname)\\s*[:=]\\s*['\"]?([a-zA-Z0-9_.\\-]{2,64})['\"]?",
                     Severity.MEDIUM,
                     1,
                     false
@@ -158,6 +169,7 @@ public class ExposedSecretDetector implements RiskDetector {
 
         for (int lineNum = 1; lineNum <= lines.length; lineNum++) {
             String line = lines[lineNum - 1];
+            log.info(line);
 
             // Avoid scanning unreasonably long minified lines
             if (line.length() > 1000) {

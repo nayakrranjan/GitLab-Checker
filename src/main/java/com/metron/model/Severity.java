@@ -1,6 +1,7 @@
 package com.metron.model;
 
 public enum Severity {
+    CRITICAL("Critical"),
     HIGH("High"),
     MEDIUM("Medium"),
     LOW("Low");
