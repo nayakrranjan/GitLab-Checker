@@ -3,7 +3,7 @@ spring:
     name: RasmiranjanNayak_Metron Security
 
 server:
-  port: 8080
+  port: 9091
 
 gitlab:
   base-url: ${GITLAB_BASE_URL:https://gitlab.com}
