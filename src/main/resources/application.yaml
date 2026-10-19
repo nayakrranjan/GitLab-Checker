@@ -1,6 +1,6 @@
 spring:
   application:
-    name: RasmiranjanNayak_Metron Security
+    name: gitlab-checker
 
 server:
   port: 9091
